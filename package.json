@@ -1,0 +1,17 @@
+{
+  "name": "weixin-bot-sdk-test",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Local test app for @4claw/weixin-bot-sdk",
+  "scripts": {
+    "start": "node index.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@4claw/weixin-bot-sdk": "file:../npm-sdk",
+    "qrcode-terminal": "^0.12.0"
+  }
+}
