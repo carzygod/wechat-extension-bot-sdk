@@ -1,0 +1,9 @@
+export const DEFAULT_BASE_URL = "https://ilinkai.weixin.qq.com";
+export const DEFAULT_CDN_BASE_URL = "https://novac2c.cdn.weixin.qq.com/c2c";
+export const DEFAULT_BOT_TYPE = "3";
+export const DEFAULT_LONG_POLL_TIMEOUT_MS = 35_000;
+export const DEFAULT_API_TIMEOUT_MS = 15_000;
+export const DEFAULT_LIGHT_API_TIMEOUT_MS = 10_000;
+export const SDK_NAME = "weixin-bot-sdk";
+export const SDK_VERSION = "0.1.0";
+//# sourceMappingURL=constants.js.map
