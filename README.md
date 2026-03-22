@@ -1,6 +1,6 @@
 # npm-test
 
-Local smoke-test app for `@4claw/weixin-bot-sdk`.
+Local smoke-test app for `weixin-bot-sdk`.
 
 Behavior:
 

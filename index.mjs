@@ -1,6 +1,6 @@
 import { createRequire } from "node:module";
 
-import { FileSessionStore, WeixinBot } from "@4claw/weixin-bot-sdk";
+import { FileSessionStore, WeixinBot } from "weixin-claw-bot-sdk";
 
 const require = createRequire(import.meta.url);
 const qrcodeTerminal = require("qrcode-terminal");
