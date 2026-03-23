@@ -10,6 +10,7 @@ TypeScript SDK for building custom Weixin bots on top of the iLink bot HTTP API.
 - Event-style bot API
 - Text, image, video, file sending
 - Media download/decrypt helpers
+- Source-aligned upload/send helpers from `source/`
 
 ## Install
 
@@ -64,7 +65,20 @@ That means:
 - `onText(regexp, listener)`
 - `sendMessage(chatId, text, options?)`
 - `sendPhoto(chatId, file, options?)`
+- `sendImage(chatId, file, options?)`
 - `sendVideo(chatId, file, options?)`
 - `sendDocument(chatId, file, options?)`
+- `sendFile(chatId, file, options?)`
 - `sendTyping(chatId)`
 - `downloadMedia(message, options?)`
+
+## Source-Aligned Low-Level Helpers
+
+These helpers follow the same upload and message construction flow used in `source/`:
+
+- `uploadFileToWeixin(...)`
+- `uploadVideoToWeixin(...)`
+- `uploadFileAttachmentToWeixin(...)`
+- `sendImageMessageWeixin(...)`
+- `sendVideoMessageWeixin(...)`
+- `sendFileMessageWeixin(...)`

@@ -1,5 +1,6 @@
 import type { DownloadMediaOptions, DownloadMediaResult, InputFile, SendMessageReq, WeixinBotMessage } from "./types.js";
 import { WeixinApiClient } from "./client.js";
+export { markdownToPlainText } from "./utils.js";
 export interface UploadedMedia {
     filekey: string;
     downloadEncryptedQueryParam: string;
@@ -9,6 +10,13 @@ export interface UploadedMedia {
     fileName: string;
     contentType: string;
 }
+export type UploadedFileInfo = {
+    filekey: string;
+    downloadEncryptedQueryParam: string;
+    aeskey: string;
+    fileSize: number;
+    fileSizeCiphertext: number;
+};
 export declare function uploadMedia(params: {
     client: WeixinApiClient;
     input: InputFile;
@@ -17,6 +25,27 @@ export declare function uploadMedia(params: {
     filename?: string;
     contentType?: string;
 }): Promise<UploadedMedia>;
+export declare function uploadFileToWeixin(params: {
+    client: WeixinApiClient;
+    input: InputFile;
+    toUserId: string;
+    filename?: string;
+    contentType?: string;
+}): Promise<UploadedFileInfo>;
+export declare function uploadVideoToWeixin(params: {
+    client: WeixinApiClient;
+    input: InputFile;
+    toUserId: string;
+    filename?: string;
+    contentType?: string;
+}): Promise<UploadedFileInfo>;
+export declare function uploadFileAttachmentToWeixin(params: {
+    client: WeixinApiClient;
+    input: InputFile;
+    toUserId: string;
+    filename?: string;
+    contentType?: string;
+}): Promise<UploadedFileInfo>;
 export declare function buildTextMessage(params: {
     to: string;
     text: string;
@@ -29,6 +58,15 @@ export declare function sendImage(params: {
     uploaded: UploadedMedia;
     caption?: string;
 }): Promise<string>;
+export declare function sendImageMessageWeixin(params: {
+    client: WeixinApiClient;
+    to: string;
+    text: string;
+    uploaded: UploadedFileInfo;
+    contextToken: string;
+}): Promise<{
+    messageId: string;
+}>;
 export declare function sendVideo(params: {
     client: WeixinApiClient;
     to: string;
@@ -36,6 +74,15 @@ export declare function sendVideo(params: {
     uploaded: UploadedMedia;
     caption?: string;
 }): Promise<string>;
+export declare function sendVideoMessageWeixin(params: {
+    client: WeixinApiClient;
+    to: string;
+    text: string;
+    uploaded: UploadedFileInfo;
+    contextToken: string;
+}): Promise<{
+    messageId: string;
+}>;
 export declare function sendDocument(params: {
     client: WeixinApiClient;
     to: string;
@@ -43,6 +90,16 @@ export declare function sendDocument(params: {
     uploaded: UploadedMedia;
     caption?: string;
 }): Promise<string>;
+export declare function sendFileMessageWeixin(params: {
+    client: WeixinApiClient;
+    to: string;
+    text: string;
+    fileName: string;
+    uploaded: UploadedFileInfo;
+    contextToken: string;
+}): Promise<{
+    messageId: string;
+}>;
 export declare function downloadMedia(params: {
     client: WeixinApiClient;
     message: WeixinBotMessage;

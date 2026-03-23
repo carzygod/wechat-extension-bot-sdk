@@ -277,6 +277,10 @@ export class WeixinBot extends EventEmitter {
     return { messageId };
   }
 
+  async sendImage(chatId: string, input: InputFile, options: SendMediaOptions = {}): Promise<{ messageId: string }> {
+    return this.sendPhoto(chatId, input, options);
+  }
+
   async sendVideo(chatId: string, input: InputFile, options: SendMediaOptions = {}): Promise<{ messageId: string }> {
     await this.ensureSessionLoaded();
     const contextToken = await this.resolveContextToken(chatId, options.contextToken);
@@ -321,6 +325,10 @@ export class WeixinBot extends EventEmitter {
       caption: options.caption,
     });
     return { messageId };
+  }
+
+  async sendFile(chatId: string, input: InputFile, options: SendMediaOptions = {}): Promise<{ messageId: string }> {
+    return this.sendDocument(chatId, input, options);
   }
 
   async sendTyping(chatId: string, options: SendCommonOptions = {}): Promise<void> {

@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import { MessageItemType, MessageState, MessageType, UploadMediaType } from "./types.js";
 import { WeixinSdkError } from "./errors.js";
 import { getMimeFromFilename, markdownToPlainText, randomId, resolveInputFile, } from "./utils.js";
+export { markdownToPlainText } from "./utils.js";
 function encryptAesEcb(plaintext, key) {
     const cipher = crypto.createCipheriv("aes-128-ecb", key, null);
     return Buffer.concat([cipher.update(plaintext), cipher.final()]);
@@ -94,6 +95,57 @@ export async function uploadMedia(params) {
         contentType: file.contentType,
     };
 }
+export async function uploadFileToWeixin(params) {
+    const uploaded = await uploadMedia({
+        client: params.client,
+        input: params.input,
+        toUserId: params.toUserId,
+        mediaType: UploadMediaType.IMAGE,
+        filename: params.filename,
+        contentType: params.contentType,
+    });
+    return {
+        filekey: uploaded.filekey,
+        downloadEncryptedQueryParam: uploaded.downloadEncryptedQueryParam,
+        aeskey: uploaded.aeskeyHex,
+        fileSize: uploaded.fileSize,
+        fileSizeCiphertext: uploaded.fileSizeCiphertext,
+    };
+}
+export async function uploadVideoToWeixin(params) {
+    const uploaded = await uploadMedia({
+        client: params.client,
+        input: params.input,
+        toUserId: params.toUserId,
+        mediaType: UploadMediaType.VIDEO,
+        filename: params.filename,
+        contentType: params.contentType,
+    });
+    return {
+        filekey: uploaded.filekey,
+        downloadEncryptedQueryParam: uploaded.downloadEncryptedQueryParam,
+        aeskey: uploaded.aeskeyHex,
+        fileSize: uploaded.fileSize,
+        fileSizeCiphertext: uploaded.fileSizeCiphertext,
+    };
+}
+export async function uploadFileAttachmentToWeixin(params) {
+    const uploaded = await uploadMedia({
+        client: params.client,
+        input: params.input,
+        toUserId: params.toUserId,
+        mediaType: UploadMediaType.FILE,
+        filename: params.filename,
+        contentType: params.contentType,
+    });
+    return {
+        filekey: uploaded.filekey,
+        downloadEncryptedQueryParam: uploaded.downloadEncryptedQueryParam,
+        aeskey: uploaded.aeskeyHex,
+        fileSize: uploaded.fileSize,
+        fileSizeCiphertext: uploaded.fileSizeCiphertext,
+    };
+}
 export function buildTextMessage(params) {
     const cleaned = markdownToPlainText(params.text);
     return {
@@ -151,6 +203,24 @@ export async function sendImage(params) {
         items,
     });
 }
+export async function sendImageMessageWeixin(params) {
+    const messageId = await sendImage({
+        client: params.client,
+        to: params.to,
+        contextToken: params.contextToken,
+        caption: params.text,
+        uploaded: {
+            filekey: params.uploaded.filekey,
+            downloadEncryptedQueryParam: params.uploaded.downloadEncryptedQueryParam,
+            aeskeyHex: params.uploaded.aeskey,
+            fileSize: params.uploaded.fileSize,
+            fileSizeCiphertext: params.uploaded.fileSizeCiphertext,
+            fileName: "image",
+            contentType: "image/*",
+        },
+    });
+    return { messageId };
+}
 export async function sendVideo(params) {
     const items = [];
     if (params.caption) {
@@ -173,6 +243,24 @@ export async function sendVideo(params) {
         contextToken: params.contextToken,
         items,
     });
+}
+export async function sendVideoMessageWeixin(params) {
+    const messageId = await sendVideo({
+        client: params.client,
+        to: params.to,
+        contextToken: params.contextToken,
+        caption: params.text,
+        uploaded: {
+            filekey: params.uploaded.filekey,
+            downloadEncryptedQueryParam: params.uploaded.downloadEncryptedQueryParam,
+            aeskeyHex: params.uploaded.aeskey,
+            fileSize: params.uploaded.fileSize,
+            fileSizeCiphertext: params.uploaded.fileSizeCiphertext,
+            fileName: "video.mp4",
+            contentType: "video/mp4",
+        },
+    });
+    return { messageId };
 }
 export async function sendDocument(params) {
     const items = [];
@@ -197,6 +285,24 @@ export async function sendDocument(params) {
         contextToken: params.contextToken,
         items,
     });
+}
+export async function sendFileMessageWeixin(params) {
+    const messageId = await sendDocument({
+        client: params.client,
+        to: params.to,
+        contextToken: params.contextToken,
+        caption: params.text,
+        uploaded: {
+            filekey: params.uploaded.filekey,
+            downloadEncryptedQueryParam: params.uploaded.downloadEncryptedQueryParam,
+            aeskeyHex: params.uploaded.aeskey,
+            fileSize: params.uploaded.fileSize,
+            fileSizeCiphertext: params.uploaded.fileSizeCiphertext,
+            fileName: params.fileName,
+            contentType: getMimeFromFilename(params.fileName),
+        },
+    });
+    return { messageId };
 }
 function getDownloadTarget(message) {
     if (!message.media) {

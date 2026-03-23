@@ -58,10 +58,16 @@ export declare class WeixinBot extends EventEmitter {
     sendPhoto(chatId: string, input: InputFile, options?: SendMediaOptions): Promise<{
         messageId: string;
     }>;
+    sendImage(chatId: string, input: InputFile, options?: SendMediaOptions): Promise<{
+        messageId: string;
+    }>;
     sendVideo(chatId: string, input: InputFile, options?: SendMediaOptions): Promise<{
         messageId: string;
     }>;
     sendDocument(chatId: string, input: InputFile, options?: SendMediaOptions): Promise<{
+        messageId: string;
+    }>;
+    sendFile(chatId: string, input: InputFile, options?: SendMediaOptions): Promise<{
         messageId: string;
     }>;
     sendTyping(chatId: string, options?: SendCommonOptions): Promise<void>;

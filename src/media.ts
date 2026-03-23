@@ -20,6 +20,8 @@ import {
   resolveInputFile,
 } from "./utils.js";
 
+export { markdownToPlainText } from "./utils.js";
+
 export interface UploadedMedia {
   filekey: string;
   downloadEncryptedQueryParam: string;
@@ -29,6 +31,14 @@ export interface UploadedMedia {
   fileName: string;
   contentType: string;
 }
+
+export type UploadedFileInfo = {
+  filekey: string;
+  downloadEncryptedQueryParam: string;
+  aeskey: string;
+  fileSize: number;
+  fileSizeCiphertext: number;
+};
 
 function encryptAesEcb(plaintext: Buffer, key: Buffer): Buffer {
   const cipher = crypto.createCipheriv("aes-128-ecb", key, null);
@@ -156,6 +166,78 @@ export async function uploadMedia(params: {
   };
 }
 
+export async function uploadFileToWeixin(params: {
+  client: WeixinApiClient;
+  input: InputFile;
+  toUserId: string;
+  filename?: string;
+  contentType?: string;
+}): Promise<UploadedFileInfo> {
+  const uploaded = await uploadMedia({
+    client: params.client,
+    input: params.input,
+    toUserId: params.toUserId,
+    mediaType: UploadMediaType.IMAGE,
+    filename: params.filename,
+    contentType: params.contentType,
+  });
+  return {
+    filekey: uploaded.filekey,
+    downloadEncryptedQueryParam: uploaded.downloadEncryptedQueryParam,
+    aeskey: uploaded.aeskeyHex,
+    fileSize: uploaded.fileSize,
+    fileSizeCiphertext: uploaded.fileSizeCiphertext,
+  };
+}
+
+export async function uploadVideoToWeixin(params: {
+  client: WeixinApiClient;
+  input: InputFile;
+  toUserId: string;
+  filename?: string;
+  contentType?: string;
+}): Promise<UploadedFileInfo> {
+  const uploaded = await uploadMedia({
+    client: params.client,
+    input: params.input,
+    toUserId: params.toUserId,
+    mediaType: UploadMediaType.VIDEO,
+    filename: params.filename,
+    contentType: params.contentType,
+  });
+  return {
+    filekey: uploaded.filekey,
+    downloadEncryptedQueryParam: uploaded.downloadEncryptedQueryParam,
+    aeskey: uploaded.aeskeyHex,
+    fileSize: uploaded.fileSize,
+    fileSizeCiphertext: uploaded.fileSizeCiphertext,
+  };
+}
+
+export async function uploadFileAttachmentToWeixin(params: {
+  client: WeixinApiClient;
+  input: InputFile;
+  toUserId: string;
+  filename?: string;
+  contentType?: string;
+}): Promise<UploadedFileInfo> {
+  const uploaded = await uploadMedia({
+    client: params.client,
+    input: params.input,
+    toUserId: params.toUserId,
+    mediaType: UploadMediaType.FILE,
+    filename: params.filename,
+    contentType: params.contentType,
+  });
+  return {
+    filekey: uploaded.filekey,
+    downloadEncryptedQueryParam: uploaded.downloadEncryptedQueryParam,
+    aeskey: uploaded.aeskeyHex,
+    fileSize: uploaded.fileSize,
+    fileSizeCiphertext: uploaded.fileSizeCiphertext,
+  };
+}
+
 export function buildTextMessage(params: {
   to: string;
   text: string;
@@ -232,6 +314,31 @@ export async function sendImage(params: {
   });
 }
 
+export async function sendImageMessageWeixin(params: {
+  client: WeixinApiClient;
+  to: string;
+  text: string;
+  uploaded: UploadedFileInfo;
+  contextToken: string;
+}): Promise<{ messageId: string }> {
+  const messageId = await sendImage({
+    client: params.client,
+    to: params.to,
+    contextToken: params.contextToken,
+    caption: params.text,
+    uploaded: {
+      filekey: params.uploaded.filekey,
+      downloadEncryptedQueryParam: params.uploaded.downloadEncryptedQueryParam,
+      aeskeyHex: params.uploaded.aeskey,
+      fileSize: params.uploaded.fileSize,
+      fileSizeCiphertext: params.uploaded.fileSizeCiphertext,
+      fileName: "image",
+      contentType: "image/*",
+    },
+  });
+  return { messageId };
+}
+
 export async function sendVideo(params: {
   client: WeixinApiClient;
   to: string;
@@ -261,6 +368,31 @@ export async function sendVideo(params: {
     contextToken: params.contextToken,
     items,
   });
+}
+
+export async function sendVideoMessageWeixin(params: {
+  client: WeixinApiClient;
+  to: string;
+  text: string;
+  uploaded: UploadedFileInfo;
+  contextToken: string;
+}): Promise<{ messageId: string }> {
+  const messageId = await sendVideo({
+    client: params.client,
+    to: params.to,
+    contextToken: params.contextToken,
+    caption: params.text,
+    uploaded: {
+      filekey: params.uploaded.filekey,
+      downloadEncryptedQueryParam: params.uploaded.downloadEncryptedQueryParam,
+      aeskeyHex: params.uploaded.aeskey,
+      fileSize: params.uploaded.fileSize,
+      fileSizeCiphertext: params.uploaded.fileSizeCiphertext,
+      fileName: "video.mp4",
+      contentType: "video/mp4",
+    },
+  });
+  return { messageId };
 }
 
 export async function sendDocument(params: {
@@ -293,6 +425,32 @@ export async function sendDocument(params: {
     contextToken: params.contextToken,
     items,
   });
+}
+
+export async function sendFileMessageWeixin(params: {
+  client: WeixinApiClient;
+  to: string;
+  text: string;
+  fileName: string;
+  uploaded: UploadedFileInfo;
+  contextToken: string;
+}): Promise<{ messageId: string }> {
+  const messageId = await sendDocument({
+    client: params.client,
+    to: params.to,
+    contextToken: params.contextToken,
+    caption: params.text,
+    uploaded: {
+      filekey: params.uploaded.filekey,
+      downloadEncryptedQueryParam: params.uploaded.downloadEncryptedQueryParam,
+      aeskeyHex: params.uploaded.aeskey,
+      fileSize: params.uploaded.fileSize,
+      fileSizeCiphertext: params.uploaded.fileSizeCiphertext,
+      fileName: params.fileName,
+      contentType: getMimeFromFilename(params.fileName),
+    },
+  });
+  return { messageId };
 }
 
 function getDownloadTarget(message: WeixinBotMessage) {
