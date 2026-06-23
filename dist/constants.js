@@ -5,5 +5,5 @@ export const DEFAULT_LONG_POLL_TIMEOUT_MS = 35_000;
 export const DEFAULT_API_TIMEOUT_MS = 15_000;
 export const DEFAULT_LIGHT_API_TIMEOUT_MS = 10_000;
 export const SDK_NAME = "weixin-bot-sdk";
-export const SDK_VERSION = "0.1.0";
+export const SDK_VERSION = "0.3.1";
 //# sourceMappingURL=constants.js.map
