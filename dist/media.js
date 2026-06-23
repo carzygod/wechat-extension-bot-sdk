@@ -4,6 +4,7 @@ import { MessageItemType, MessageState, MessageType, UploadMediaType } from "./t
 import { WeixinSdkError } from "./errors.js";
 import { getMimeFromFilename, markdownToPlainText, randomId, resolveInputFile, } from "./utils.js";
 export { markdownToPlainText } from "./utils.js";
+const CDN_UPLOAD_MAX_RETRIES = 3;
 function encryptAesEcb(plaintext, key) {
     const cipher = crypto.createCipheriv("aes-128-ecb", key, null);
     return Buffer.concat([cipher.update(plaintext), cipher.final()]);
@@ -32,28 +33,54 @@ function parseAesKey(aesKeyBase64) {
 }
 async function uploadEncryptedBuffer(params) {
     const ciphertext = encryptAesEcb(params.buffer, params.aesKey);
-    const response = await fetch(buildCdnUploadUrl({
-        cdnBaseUrl: params.client.cdnBaseUrl,
-        uploadParam: params.uploadParam,
-        filekey: params.filekey,
-    }), {
-        method: "POST",
-        headers: { "Content-Type": "application/octet-stream" },
-        body: new Uint8Array(ciphertext),
-    });
-    if (response.status >= 400 && response.status < 500) {
-        const message = response.headers.get("x-error-message") ?? (await response.text());
-        throw new WeixinSdkError("CDN_UPLOAD_CLIENT_ERROR", `CDN upload failed: ${message}`);
+    const uploadFullUrl = params.uploadFullUrl?.trim();
+    const cdnUrl = uploadFullUrl
+        ? uploadFullUrl
+        : params.uploadParam
+            ? buildCdnUploadUrl({
+                cdnBaseUrl: params.client.cdnBaseUrl,
+                uploadParam: params.uploadParam,
+                filekey: params.filekey,
+            })
+            : undefined;
+    if (!cdnUrl) {
+        throw new WeixinSdkError("CDN_UPLOAD_URL_MISSING", "CDN upload URL missing. Expected getuploadurl to return upload_full_url or upload_param.");
     }
-    if (response.status !== 200) {
-        const message = response.headers.get("x-error-message") ?? `status ${response.status}`;
-        throw new WeixinSdkError("CDN_UPLOAD_SERVER_ERROR", `CDN upload failed: ${message}`);
+    let lastError;
+    for (let attempt = 1; attempt <= CDN_UPLOAD_MAX_RETRIES; attempt += 1) {
+        try {
+            const response = await fetch(cdnUrl, {
+                method: "POST",
+                headers: { "Content-Type": "application/octet-stream" },
+                body: new Uint8Array(ciphertext),
+            });
+            if (response.status >= 400 && response.status < 500) {
+                const message = response.headers.get("x-error-message") ?? (await response.text());
+                throw new WeixinSdkError("CDN_UPLOAD_CLIENT_ERROR", `CDN upload failed: ${message}`);
+            }
+            if (response.status !== 200) {
+                const message = response.headers.get("x-error-message") ?? `status ${response.status}`;
+                throw new WeixinSdkError("CDN_UPLOAD_SERVER_ERROR", `CDN upload failed: ${message}`);
+            }
+            const encryptedParam = response.headers.get("x-encrypted-param");
+            if (!encryptedParam) {
+                throw new WeixinSdkError("CDN_UPLOAD_MISSING_PARAM", "CDN upload response missing x-encrypted-param");
+            }
+            return encryptedParam;
+        }
+        catch (error) {
+            lastError = error;
+            if (error instanceof WeixinSdkError && error.code === "CDN_UPLOAD_CLIENT_ERROR") {
+                throw error;
+            }
+            if (attempt === CDN_UPLOAD_MAX_RETRIES) {
+                break;
+            }
+        }
     }
-    const encryptedParam = response.headers.get("x-encrypted-param");
-    if (!encryptedParam) {
-        throw new WeixinSdkError("CDN_UPLOAD_MISSING_PARAM", "CDN upload response missing x-encrypted-param");
-    }
-    return encryptedParam;
+    if (lastError instanceof Error)
+        throw lastError;
+    throw new WeixinSdkError("CDN_UPLOAD_FAILED", "CDN upload failed after retries");
 }
 export async function uploadMedia(params) {
     const file = await resolveInputFile(params.input, {
@@ -75,13 +102,16 @@ export async function uploadMedia(params) {
         no_need_thumb: true,
         aeskey: aesKey.toString("hex"),
     });
-    if (!uploadUrl.upload_param) {
-        throw new WeixinSdkError("UPLOAD_URL_MISSING", "Upstream getuploadurl did not return upload_param");
+    const uploadFullUrl = uploadUrl.upload_full_url?.trim();
+    const uploadParam = uploadUrl.upload_param?.trim();
+    if (!uploadFullUrl && !uploadParam) {
+        throw new WeixinSdkError("UPLOAD_URL_MISSING", "Upstream getuploadurl did not return upload_full_url or upload_param");
     }
     const downloadEncryptedQueryParam = await uploadEncryptedBuffer({
         client: params.client,
         buffer: file.buffer,
-        uploadParam: uploadUrl.upload_param,
+        uploadFullUrl,
+        uploadParam,
         filekey,
         aesKey,
     });
@@ -190,7 +220,7 @@ export async function sendImage(params) {
         image_item: {
             media: {
                 encrypt_query_param: params.uploaded.downloadEncryptedQueryParam,
-                aes_key: Buffer.from(params.uploaded.aeskeyHex, "hex").toString("base64"),
+                aes_key: Buffer.from(params.uploaded.aeskeyHex).toString("base64"),
                 encrypt_type: 1,
             },
             mid_size: params.uploaded.fileSizeCiphertext,
@@ -231,7 +261,7 @@ export async function sendVideo(params) {
         video_item: {
             media: {
                 encrypt_query_param: params.uploaded.downloadEncryptedQueryParam,
-                aes_key: Buffer.from(params.uploaded.aeskeyHex, "hex").toString("base64"),
+                aes_key: Buffer.from(params.uploaded.aeskeyHex).toString("base64"),
                 encrypt_type: 1,
             },
             video_size: params.uploaded.fileSizeCiphertext,
@@ -272,7 +302,7 @@ export async function sendDocument(params) {
         file_item: {
             media: {
                 encrypt_query_param: params.uploaded.downloadEncryptedQueryParam,
-                aes_key: Buffer.from(params.uploaded.aeskeyHex, "hex").toString("base64"),
+                aes_key: Buffer.from(params.uploaded.aeskeyHex).toString("base64"),
                 encrypt_type: 1,
             },
             file_name: params.uploaded.fileName,
@@ -315,6 +345,7 @@ function getDownloadTarget(message) {
                 aesKey: message.media.item.aeskey
                     ? Buffer.from(message.media.item.aeskey, "hex").toString("base64")
                     : message.media.aesKey,
+                fullUrl: message.media.item.media?.full_url,
                 fileName: "image.jpg",
                 mimeType: "image/jpeg",
             };
@@ -322,6 +353,7 @@ function getDownloadTarget(message) {
             return {
                 fileId: message.media.fileId,
                 aesKey: message.media.aesKey,
+                fullUrl: message.media.item.media?.full_url,
                 fileName: "video.mp4",
                 mimeType: "video/mp4",
             };
@@ -329,6 +361,7 @@ function getDownloadTarget(message) {
             return {
                 fileId: message.media.fileId,
                 aesKey: message.media.aesKey,
+                fullUrl: message.media.item.media?.full_url,
                 fileName: message.media.fileName ?? "file.bin",
                 mimeType: getMimeFromFilename(message.media.fileName ?? "file.bin"),
             };
@@ -336,6 +369,7 @@ function getDownloadTarget(message) {
             return {
                 fileId: message.media.fileId,
                 aesKey: message.media.aesKey,
+                fullUrl: message.media.item.media?.full_url,
                 fileName: "voice.silk",
                 mimeType: "audio/silk",
             };
@@ -343,7 +377,7 @@ function getDownloadTarget(message) {
 }
 export async function downloadMedia(params) {
     const target = getDownloadTarget(params.message);
-    const response = await fetch(buildCdnDownloadUrl(target.fileId, params.client.cdnBaseUrl));
+    const response = await fetch(target.fullUrl ?? buildCdnDownloadUrl(target.fileId, params.client.cdnBaseUrl));
     if (!response.ok) {
         throw new WeixinSdkError("CDN_DOWNLOAD_FAILED", `CDN download failed: ${response.status} ${response.statusText}`);
     }

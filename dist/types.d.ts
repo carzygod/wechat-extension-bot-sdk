@@ -36,6 +36,7 @@ export interface CDNMedia {
     encrypt_query_param?: string;
     aes_key?: string;
     encrypt_type?: number;
+    full_url?: string;
 }
 export interface ImageItem {
     media?: CDNMedia;
@@ -129,6 +130,7 @@ export interface GetUploadUrlReq {
 export interface GetUploadUrlResp {
     upload_param?: string;
     thumb_upload_param?: string;
+    upload_full_url?: string;
 }
 export interface SendMessageReq {
     msg?: WeixinRawMessage;
